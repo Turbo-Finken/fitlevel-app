@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FitLevel</title>
+
+<style>
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:radial-gradient(circle at top,#1e293b,#0f172a 60%);
+  color:white;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height:100vh;
+}
+
+.app{
+  width:100%;
+  max-width:500px;
+  padding:25px;
+}
+
+header{
+  text-align:center;
+  margin-bottom:20px;
+}
+
+.stats{
+  display:flex;
+  justify-content:space-between;
+  font-size:14px;
+  opacity:0.85;
+  margin-top:8px;
+}
+
+.progress{
+  height:8px;
+  background:rgba(255,255,255,0.1);
+  border-radius:20px;
+  overflow:hidden;
+  margin:15px 0 25px 0;
+}
+
+.progress-bar{
+  height:100%;
+  width:0%;
+  background:linear-gradient(90deg,#22c55e,#4ade80);
+  transition:0.4s;
+}
+
+.card{
+  background:rgba(255,255,255,0.06);
+  backdrop-filter:blur(25px);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:28px;
+  padding:25px;
+  box-shadow:0 15px 50px rgba(0,0,0,0.5);
+}
+
+.exercise-name{
+  font-size:22px;
+  font-weight:600;
+  text-align:center;
+}
+
+.reps{
+  text-align:center;
+  opacity:0.75;
+  margin:5px 0 20px 0;
+}
+
+.timer-section{
+  display:flex;
+  gap:15px;
+  justify-content:space-between;
+  margin-bottom:15px;
+}
+
+.timer-box{
+  flex:1;
+  text-align:center;
+}
+
+.timer-circle{
+  width:120px;
+  height:120px;
+  border-radius:50%;
+  margin:10px auto;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-size:28px;
+  font-weight:600;
+  background:radial-gradient(circle,#1e293b,#0f172a);
+  box-shadow:0 0 20px rgba(34,197,94,0.4);
+}
+
+.small-timer{
+  width:100px;
+  height:100px;
+  font-size:22px;
+  box-shadow:0 0 20px rgba(96,165,250,0.4);
+}
+
+input{
+  width:60px;
+  padding:5px;
+  border-radius:10px;
+  border:none;
+  text-align:center;
+  margin-top:5px;
+}
+
+.set-counter{
+  text-align:center;
+  margin-top:10px;
+}
+
+button{
+  background:linear-gradient(90deg,#22c55e,#16a34a);
+  border:none;
+  padding:12px;
+  width:100%;
+  border-radius:20px;
+  font-weight:600;
+  cursor:pointer;
+  margin-top:10px;
+  color:white;
+}
+
+button:disabled{
+  opacity:0.4;
+  cursor:not-allowed;
+}
+
+.extra-btn{
+  background:linear-gradient(90deg,#3b82f6,#2563eb);
+  margin-top:5px;
+}
+
+.success{
+  text-align:center;
+  margin-top:10px;
+  color:#4ade80;
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+<header>
+<h1>FitLevel</h1>
+<div class="stats">
+<span>🔥 <span id="streak">0</span></span>
+<span>⭐ <span id="xp">0</span> XP</span>
+<span>🏆 Level <span id="level">1</span></span>
+</div>
+</header>
+
+<div class="progress">
+<div class="progress-bar" id="progressBar"></div>
+</div>
+
+<div class="card">
+
+<div class="exercise-name" id="exerciseName">Bereit?</div>
+<div class="reps" id="exerciseReps">Drücke Start</div>
+
+<div class="timer-section">
+
+<div class="timer-box">
+<div>Übung</div>
+<div class="timer-circle" id="mainTimer">30</div>
+</div>
+
+<div class="timer-box">
+<div>Extra Timer</div>
+<div class="timer-circle small-timer" id="customTimer">0</div>
+<input type="number" id="customInput" placeholder="Sek" min="1">
+<button class="extra-btn" onclick="startCustomTimer()">Start</button>
+</div>
+
+</div>
+
+<div class="set-counter" id="setCounter"></div>
+
+<button id="startBtn" onclick="startWorkout()">Start Workout</button>
+<button id="doneSetBtn" onclick="completeSet()" disabled>Satz geschafft</button>
+<button id="nextBtn" onclick="nextExercise()" disabled>Nächste Übung</button>
+
+<div class="success" id="successMsg"></div>
+
+</div>
+</div>
+
+<script>
+
+const workouts = [
+ {name:"Liegestütze", sets:3, reps:"8–12 Wiederholungen", rest:30, type:"normal"},
+ {name:"Klimmzüge", sets:3, reps:"5–10 Wiederholungen", rest:45, type:"normal"},
+ {name:"Kniebeugen", sets:3, reps:"12–20 Wiederholungen", rest:30, type:"normal"},
+ {name:"Plank", sets:3, reps:"30 Sekunden halten", rest:30, type:"plank"}
+];
+
+let currentExercise = 0;
+let currentSet = 0;
+let timerInterval;
+let customInterval;
+
+function startWorkout(){
+  document.getElementById("startBtn").disabled = true;
+  loadExercise();
+}
+
+function loadExercise(){
+  const ex = workouts[currentExercise];
+  currentSet = 0;
+
+  document.getElementById("exerciseName").textContent = ex.name;
+  document.getElementById("exerciseReps").textContent = "Empfohlen: " + ex.reps;
+  document.getElementById("setCounter").textContent = "Satz 0 / " + ex.sets;
+  document.getElementById("doneSetBtn").disabled = false;
+  document.getElementById("nextBtn").disabled = true;
+  document.getElementById("mainTimer").textContent = ex.rest;
+  document.getElementById("successMsg").textContent = "";
+}
+
+function completeSet(){
+  const ex = workouts[currentExercise];
+  if(currentSet >= ex.sets) return;
+
+  if(ex.type === "plank"){
+    startMainTimer(ex.rest,true);
+  } else {
+    currentSet++;
+    document.getElementById("setCounter").textContent =
+     "Satz " + currentSet + " / " + ex.sets;
+    startMainTimer(ex.rest,false);
+  }
+}
+
+function startMainTimer(seconds,isPlank){
+  clearInterval(timerInterval);
+  let timeLeft = seconds;
+  document.getElementById("mainTimer").textContent = timeLeft;
+
+  timerInterval = setInterval(()=>{
+    timeLeft--;
+    document.getElementById("mainTimer").textContent = timeLeft;
+
+    if(timeLeft <= 0){
+      clearInterval(timerInterval);
+
+      if(isPlank){
+        currentSet++;
+        document.getElementById("setCounter").textContent =
+          "Satz " + currentSet + " / " + workouts[currentExercise].sets;
+      }
+
+      if(currentSet === workouts[currentExercise].sets){
+        document.getElementById("doneSetBtn").disabled = true;
+        document.getElementById("nextBtn").disabled = false;
+        document.getElementById("successMsg").textContent = "Übung geschafft 💪";
+      }
+    }
+  },1000);
+}
+
+function startCustomTimer(){
+  clearInterval(customInterval);
+  let seconds = parseInt(document.getElementById("customInput").value);
+  if(!seconds || seconds <= 0) return;
+
+  let timeLeft = seconds;
+  document.getElementById("customTimer").textContent = timeLeft;
+
+  customInterval = setInterval(()=>{
+    timeLeft--;
+    document.getElementById("customTimer").textContent = timeLeft;
+
+    if(timeLeft <= 0){
+      clearInterval(customInterval);
+    }
+  },1000);
+}
+
+function nextExercise(){
+  currentExercise++;
+  if(currentExercise >= workouts.length){
+    document.getElementById("exerciseName").textContent="Workout fertig 🔥";
+    document.getElementById("exerciseReps").textContent="";
+    document.getElementById("doneSetBtn").disabled=true;
+    document.getElementById("nextBtn").disabled=true;
+    return;
+  }
+  loadExercise();
+}
+
+</script>
+
+</body>
+</html>
